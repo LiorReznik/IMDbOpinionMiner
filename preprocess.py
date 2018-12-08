@@ -1,81 +1,160 @@
 import numpy as np
 import  tensorflow as tf
-import os,urllib,tarfile,re
-
-
+import os,urllib,tarfile,re,logging,pickle,sys
+from datetime import datetime
+from keras.models import Sequential
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
+from nltk.corpus import stopwords
+from nltk.stem import SnowballStemmer
+from collections import Counter
+import json
 class Preprocess:
 
-    def __init__(self, path='http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz', archive_name='imdbrev.tar.gz',folder_name='imdbrev'):
-        self.__prep = {'X_train': np.array([]), 'Y_train': [], 'X_test': np.array([]), "Y_test": []}
-        self.__reviews = {'train': [], "test": []}
+    def __init__(self, path='http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz', archive_name='imdbrev.tar.gz',folder_name='aclImdb'):
+        self.prep = {'X_train': [], 'Y_train': [], 'X_test': [], "Y_test": [],"vocab_size": [], "max_seq_len": 0}
+        self.__start_logger
         self.__path=path
+        self.__vocab=[]
         self.__archive_name = archive_name
         self.__folder_name = folder_name
+        self.__preprocess
+        print(self.prep['X_train'].shape,self.prep['X_test'].shape, self.prep['Y_train'].shape, self.prep['Y_test'].shape )
+
+
+
+
+    @property
+    def __preprocess(self):
         self.__download_reviews
         self.__prepare_reviews
-        self.__pad_and_truncate('train')
-        self.__pad_and_truncate('test')
+        self.sent_to_seq
 
+        self.__logger.info('end of the preprocessing')
+
+    @property
+    def __start_logger(self):
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        self.__logger = logging.getLogger('Preprocess')
+        self.__logger.setLevel(logging.DEBUG)
+        # create file handler which logs even debug messages
+        fh = logging.FileHandler(datetime.now().strftime('Preprocess_%H_%M_%d_%m_%Y.log'))
+        fh.setLevel(logging.DEBUG)
+        # create console handler with a higher log level
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.ERROR)
+        # create formatter and add it to the handlers
+        fh.setFormatter(formatter)
+        ch.setFormatter(formatter)
+        # add the handlers to the logger
+        self.__logger.addHandler(fh)
+        self.__logger.addHandler(ch)
 
     @property
     def __download_reviews(self):
         """""
-        function to download the reviews
+        function to download the reviews form stanfords servers
         """""
         if not os.path.exists(self.__archive_name):
             try:
+                self.__logger.info("Downloading the reviews")
                 self.__reviews_tar, _ = urllib.request.urlretrieve(self.__path, self.__archive_name)
             except urllib.error as e:
-                print(e)
+                self.__logger.exception(e.to_str())
 
-            print("done downloading")
+            self.__logger.info("Download has completed")
         else:
-             print ("File already exists")
+            self.__logger.warning("Skipping Download,The Archive already in the HD")
 
     @property
     def __prepare_reviews(self):
         """""
-        function to extract the reviews
+        function to extract the reviews and sends them into preprocessing
         """""
+
         def extract():
-            print("starting the extraction")
+            self.__logger.info("starting the extraction")
             with tarfile.open(self.__archive_name) as file:
                 file.extractall()
-            print("done extracting")
+            self.__logger.info("done extracting")
 
         if not os.path.exists(self.__folder_name):
              extract()
-        self.__get_reviews(path='aclImdb/train/pos/',polarity=True,type='train')
-        self.__get_reviews(path='aclImdb/train/neg/',polarity=False,type='train')
-        self.__get_reviews(path='aclImdb/test/pos/', polarity=True, type='test')
-        self.__get_reviews(path='aclImdb/test/neg/', polarity=False, type='test')
-        self.__prep['Y_train'] = np.array(self.__prep['Y_train'])
-        self.__prep['Y_test'] = np.array(self.__prep['Y_test'])
+        else:
+            self.__logger.warning("the archive is already in the disk")
+        self.__get_and_prep(path='aclImdb/train/pos/', polarity=True, type='train')
+        self.__get_and_prep(path='aclImdb/train/neg/', polarity=False, type='train')
+        self.__get_and_prep(path='aclImdb/test/pos/', polarity=True, type='test')
+        self.__get_and_prep(path='aclImdb/test/neg/', polarity=False, type='test')
+        self.prep['Y_train'] = np.array(self.prep['Y_train'])
+        self.prep['Y_test'] = np.array(self.prep['Y_test'])
 
-    def __get_reviews(self,path,polarity, type):
+    def __get_and_prep(self, path, polarity, type):
 
         def normalize():
+            self.__logger.info('Normalizing the review')
             nonlocal rev
-            rev = rev.lower().replace('<br />', ' ')
+            rev = rev.lower()
+            rev = re.sub("<br />", "", rev)
+            rev = re.sub("'s", " is", rev)
+            rev = re.sub("'ve", " have", rev)
+            rev = re.sub("'t", " not", rev)
+            rev = re.sub("cannot", " can not", rev)
+            rev = re.sub("'re", " are", rev)
+            rev = re.sub("'d", " would", rev)
+            rev = re.sub("'ll", " will", rev)
             rev = re.sub("[^a-z0-9 ]+", '', rev)
+            rev = rev.split()
+            stemmer = SnowballStemmer('english')
+            rev = [stemmer.stem(word) for word in rev]
 
+        def remove_stop_words():
+            self.__logger.info("tokenizing the review")
+            nonlocal rev
+            stop_words = set(stopwords.words('english'))
+            rev = [w for w in rev if w not in stop_words]
+            rev = " ".join(rev)
+
+        polar = self.__path.split('/')[-2]
+        idx = 0
         for file in os.listdir(path):
             if file.endswith('.txt'):
+                idx+=1
+                self.__logger.info('working on the {},{}, out of the {} set'.format(idx, polar, type))
                 with open(os.path.join(path,file), 'r', encoding="utf-8") as f:
+                    self.__logger.info('reading the review')
                     rev = f.read()
                     normalize()
-                    self.__reviews[type].append(rev)
-                    self.__prep['Y_{}'.format(type)].append(int(polarity))
+                    remove_stop_words()
+                    self.__logger.info('saving the data')
+                    self.prep['X_{}'.format(type)].append(rev)
+                    self.prep['Y_{}'.format(type)].append(int(polarity))
 
-    def __pad_and_truncate(self, type):
-
+    @property
+    def sent_to_seq(self):
         def find_max_seq():
-            return max([len(set(sentence.split())) for sentence in self.__reviews[type]])
+            def find_max_for_type(type):
+                self.__logger.info('finding the max sequence len for the {} set'.format(type))
+                print(len(self.prep['X_train']))
+                return max([len(set(sentence)) for sentence in self.prep['X_{}'.format(type)]])
 
-        self.__vocab = tf.contrib.learn.preprocessing.VocabularyProcessor(find_max_seq())
-        self.__prep['X_{}'.format(type)] = np.array(list(self.__vocab.fit_transform(self.__reviews[type])))
+            self.prep['max_seq_len'] = max(find_max_for_type('train'), find_max_for_type('test'))
+
+        def dataset_to_seq():
+            tokenizer = Tokenizer(num_words=7000)
+            tokenizer.fit_on_texts(self.prep['X_{}'.format(type)])
+            self.prep['X_{}'.format(type)] = tokenizer.texts_to_sequences(self.prep['X_{}'.format(type)])
+
+        def pad_seq():
+            self.prep['X_{}'.format(type)] = pad_sequences(self.prep['X_{}'.format(type)], 100)
+
+
+        type = 'train'
+        dataset_to_seq()
+        pad_seq()
+        type = 'test'
+        dataset_to_seq()
+        pad_seq()
 
 
 
-
-Preprocess()
