@@ -84,8 +84,10 @@ class Preprocess:
             self.__logger.warning("the archive is already in the disk")
         self.__get_and_prep(path='aclImdb/train/pos/', polarity=True, type='train')
         self.__get_and_prep(path='aclImdb/train/neg/', polarity=False, type='train')
+        print(self.prep['X_train'][0])
         self.__get_and_prep(path='aclImdb/test/pos/', polarity=True, type='test')
         self.__get_and_prep(path='aclImdb/test/neg/', polarity=False, type='test')
+
         self.prep['Y_train'] = np.array(self.prep['Y_train'])
         self.prep['Y_test'] = np.array(self.prep['Y_test'])
 
@@ -94,7 +96,6 @@ class Preprocess:
         def normalize():
             self.__logger.info('Normalizing the review')
             nonlocal rev
-            rev = rev.lower()
             rev = re.sub("<br />", "", rev)
             rev = re.sub("'s", " is", rev)
             rev = re.sub("'ve", " have", rev)
@@ -103,14 +104,19 @@ class Preprocess:
             rev = re.sub("'re", " are", rev)
             rev = re.sub("'d", " would", rev)
             rev = re.sub("'ll", " will", rev)
-            rev = re.sub("[^a-z0-9 ]+", '', rev)
-            rev = rev.split()
-            stemmer = SnowballStemmer('english')
-            rev = [stemmer.stem(word) for word in rev]
+            rev = re.sub("[^a-z ]+", '', rev.lower().replace('.',' ').replace(',',' '))
+
+            # stemmer = SnowballStemmer('english')
+            # rev = [stemmer.stem(word) for word in rev]
+            from nltk.stem import WordNetLemmatizer
+            import nltk
+            wordnet_lemmatizer = WordNetLemmatizer()
+            rev = list(map(lambda x: wordnet_lemmatizer.lemmatize(x), rev.split()))
 
         def remove_stop_words():
             self.__logger.info("tokenizing the review")
             nonlocal rev
+            #rev = rev.split()
             stop_words = set(stopwords.words('english'))
             rev = [w for w in rev if w not in stop_words]
             rev = " ".join(rev)
@@ -127,34 +133,42 @@ class Preprocess:
                     normalize()
                     remove_stop_words()
                     self.__logger.info('saving the data')
-                    self.prep['X_{}'.format(type)].append(rev)
-                    self.prep['Y_{}'.format(type)].append(int(polarity))
+                    self.prep['X_train'].append(rev)
+                    self.prep['Y_train'].append(int(polarity))
+
 
     @property
     def sent_to_seq(self):
         def find_max_seq():
             def find_max_for_type(type):
                 self.__logger.info('finding the max sequence len for the {} set'.format(type))
-                print(len(self.prep['X_train']))
-                return max([len(set(sentence)) for sentence in self.prep['X_{}'.format(type)]])
-
-            self.prep['max_seq_len'] = max(find_max_for_type('train'), find_max_for_type('test'))
+                #print(len(self.prep['X_train']))
+               # return max([len(set(sentence)) for sentence in self.prep['X_{}'.format(type)]])
+                return max([len(set(sentence)) for sentence in self.prep['X_train']])
+            #self.prep['max_seq_len'] = max(find_max_for_type('train'), find_max_for_type('test'))
 
         def dataset_to_seq():
-            tokenizer = Tokenizer(num_words=7000)
-            tokenizer.fit_on_texts(self.prep['X_{}'.format(type)])
-            self.prep['X_{}'.format(type)] = tokenizer.texts_to_sequences(self.prep['X_{}'.format(type)])
+            tokenizer = Tokenizer(num_words=15000)
+            tokenizer.fit_on_texts(self.prep['X_train'])
+            self.prep['X_train'] = tokenizer.texts_to_sequences(self.prep['X_train'])
+            self.prep['vocab'] = tokenizer.word_index
+
 
         def pad_seq():
-            self.prep['X_{}'.format(type)] = pad_sequences(self.prep['X_{}'.format(type)], 100)
+            self.prep['X_{}'.format(type)] = pad_sequences(self.prep['X_train'], padding='post',
+                                                           truncating='post', maxlen=140)
 
 
         type = 'train'
         dataset_to_seq()
+        print(self.prep['X_train'][0])
         pad_seq()
-        type = 'test'
-        dataset_to_seq()
-        pad_seq()
-
+        print(self.prep['X_train'][0])
+        #type = 'test'
+        #dataset_to_seq()
+        #pad_seq()
+        from sklearn.model_selection import train_test_split
+        self.prep['X_train'],self.prep['X_test'],self.prep['Y_train'],self.prep['Y_test'] =\
+            train_test_split(self.prep['X_train'], self.prep['Y_train'], test_size=0.33, random_state=42)
 
 
