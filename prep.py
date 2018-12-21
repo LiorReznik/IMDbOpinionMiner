@@ -65,16 +65,12 @@ class Preprocess:
             rev = re.sub("<br />", "", rev)
             rev = re.sub("'s", " is", rev)
             rev = re.sub("'ve", " have", rev)
-            rev = re.sub("n't", " not", rev)
+            rev = re.sub("'t", " not", rev)
             rev = re.sub("cannot", " can not", rev)
             rev = re.sub("'re", " are", rev)
             rev = re.sub("'d", " would", rev)
             rev = re.sub("'ll", " will", rev)
             rev = re.sub("[^a-z ]+", '', rev.lower().replace('.',' ').replace(',',' '))
-
-
-
-
 
             from nltk.stem import WordNetLemmatizer
             wordnet_lemmatizer = WordNetLemmatizer()
@@ -105,14 +101,14 @@ class Preprocess:
             self.prep['Y'] = np.array(self.prep['Y'])
 
         def dataset_to_seq():
-            tokenizer = Tokenizer(num_words=25000)
+            tokenizer = Tokenizer(num_words=10000)
             tokenizer.fit_on_texts(self.prep['X'])
             self.prep['X'] = tokenizer.texts_to_sequences(self.prep['X'])
             self.prep['vocab'] = tokenizer.word_index
 
         def pad_seq():
             self.prep['X'] = pad_sequences(self.prep['X'], padding='post',
-                                                           truncating='post', maxlen=180)
+                                                           truncating='post', maxlen=80)
 
         def split():
             from sklearn.model_selection import train_test_split
@@ -124,3 +120,6 @@ class Preprocess:
         pad_seq()
         split()
 
+
+
+Preprocess()
