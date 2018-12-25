@@ -3,16 +3,17 @@ import os,urllib,tarfile,re
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from nltk.corpus import stopwords
+import pickle
 
 
 class Preprocess:
     def __init__(self, path='http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz', archive_name='imdbrev.tar.gz',folder_name='aclImdb'):
-        self.prep={'X':[],'Y':[]}
+        self.prep = {'X': [], 'Y': []}
         self.path = path
         self.archive_name = archive_name
         self.folder_name = folder_name
         self.preprocess
-        print(self.prep['X_train'].shape,self.prep['X_test'].shape, self.prep['Y_train'].shape, self.prep['Y_test'].shape )
+        print(self.prep['X_train'].shape, self.prep['X_test'].shape, self.prep['Y_train'].shape, self.prep['Y_test'].shape )
 
     @property
     def preprocess(self):
@@ -72,10 +73,6 @@ class Preprocess:
             rev = re.sub("'ll", " will", rev)
             rev = re.sub("[^a-z ]+", '', rev.lower().replace('.',' ').replace(',',' '))
 
-
-
-
-
             from nltk.stem import WordNetLemmatizer
             wordnet_lemmatizer = WordNetLemmatizer()
             rev = list(map(lambda x: wordnet_lemmatizer.lemmatize(x), rev.split()))
@@ -119,8 +116,12 @@ class Preprocess:
             self.prep['X_train'], self.prep['X_test'], self.prep['Y_train'], self.prep['Y_test'] = \
                 train_test_split(self.prep['X'], self.prep['Y'], test_size=0.33, random_state=42)
 
+        def to_pickle():
+            with open('vocab.pickle', 'wb') as f:
+                pickle.dump(self.prep['vocab'], f,pickle.HIGHEST_PROTOCOL)
+
         to_numpy()
         dataset_to_seq()
         pad_seq()
         split()
-
+        to_pickle()
