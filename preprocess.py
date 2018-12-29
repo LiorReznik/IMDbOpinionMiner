@@ -3,11 +3,12 @@ import os,urllib,tarfile,re
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from nltk.corpus import stopwords
-import pickle
+import pickle,nltk
 
 
 class Preprocess:
     def __init__(self, path='http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz', archive_name='imdbrev.tar.gz',folder_name='aclImdb'):
+        nltk.download('wordnet')#downloading the wordnet from nltk servers we will nedd this for lemma
         self.prep = {'X': [], 'Y': []}
         self.path = path
         self.archive_name = archive_name
@@ -28,10 +29,10 @@ class Preprocess:
         """""
         if not os.path.exists(self.archive_name):
             try:
-                self.__logger.info("Downloading the reviews")
-                self.__reviews_tar, _ = urllib.request.urlretrieve(self.__path, self.__archive_name)
+                print("Downloading the reviews")
+                self.__reviews_tar, _ = urllib.request.urlretrieve(self.path, self.archive_name)
             except urllib.error as e:
-                self.__logger.exception(e.to_str())
+                print(e.to_str())
 
             print("Download has completed")
         else:
@@ -73,14 +74,18 @@ class Preprocess:
             rev = re.sub("'ll", " will", rev)
             rev = re.sub("[^a-z ]+", '', rev.lower().replace('.',' ').replace(',',' '))
 
+            #lemmatizing the review
             from nltk.stem import WordNetLemmatizer
             wordnet_lemmatizer = WordNetLemmatizer()
             rev = list(map(lambda x: wordnet_lemmatizer.lemmatize(x), rev.split()))
 
         def remove_stop_words():
+            """""
+            removing stop words except not and nor
+            """""
             print("tokenizing the review")
             nonlocal rev
-            stop_words = set(stopwords.words('english'))
+            stop_words = set(stopwords.words('english')) - {'not', 'nor'}
             rev = [w for w in rev if w not in stop_words]
             rev = " ".join(rev)
 
@@ -102,10 +107,14 @@ class Preprocess:
             self.prep['Y'] = np.array(self.prep['Y'])
 
         def dataset_to_seq():
+            # indicating to the model that we want only the top 25k words to save when transforming to seq
             tokenizer = Tokenizer(num_words=25000)
+            # building  a vocab out of the data and saving all the words,
+            # the numeric representation that will be given to the words will be the lowest index is the word with the higer freq
             tokenizer.fit_on_texts(self.prep['X'])
+            # making a vector of sequences(matrix) were only the top 25k words is taken into consideration
             self.prep['X'] = tokenizer.texts_to_sequences(self.prep['X'])
-            self.prep['vocab'] = tokenizer.word_index
+            self.prep['vocab'] = tokenizer.word_index#saving the vocab so we can use it when loading the model
 
         def pad_seq():
             self.prep['X'] = pad_sequences(self.prep['X'], padding='post',
