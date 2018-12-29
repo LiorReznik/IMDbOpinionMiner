@@ -66,4 +66,4 @@ class Trainer:
         print("Test accuracy:" , scores[1]*100)
 
 
-#Trainer(load='FINAL25.h5')
+Trainer(load='FINAL25.h5')

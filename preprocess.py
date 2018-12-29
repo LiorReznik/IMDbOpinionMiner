@@ -8,7 +8,8 @@ import pickle,nltk
 
 class Preprocess:
     def __init__(self, path='http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz', archive_name='imdbrev.tar.gz',folder_name='aclImdb'):
-        nltk.download('wordnet')#downloading the wordnet from nltk servers we will nedd this for lemma
+        nltk.download('wordnet')#if the wordnet is not uptodate or doesnot exsists in the computer then downloading it from nltk servers we will nedd this for lemma
+        nltk.download('stopwords')#if the stopwords vocab is not uptodate or doesnot exsists in the computer downloading then it from nltk servers 
         self.prep = {'X': [], 'Y': []}
         self.path = path
         self.archive_name = archive_name
@@ -45,7 +46,7 @@ class Preprocess:
         """""
         def extract():
             print("starting the extraction")
-            with tarfile.open(self.__archive_name) as file:
+            with tarfile.open(self.archive_name) as file:
                 file.extractall()
             print("done extracting")
 

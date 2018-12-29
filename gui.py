@@ -5,13 +5,15 @@ from tkinter import messagebox
 from keras.models import load_model
 from keras.preprocessing.sequence import pad_sequences
 from nltk.corpus import stopwords
-import pickle
+import pickle,nltk
 
 class View:
     def __init__(self, main):
         """
         :param main: the main frame
         """
+        nltk.download('wordnet')#if the wordnet is not uptodate or doesnot exsists in the computer then downloading it from nltk servers we will nedd this for lemma
+        nltk.download('stopwords')#if the stopwords vocab is not uptodate or doesnot exsists in the computer downloading then it from nltk servers 
         self.main = main#saving the main frame
         self.model=load_model('FINAL25.h5')#loading the model
         #opening the vocab
@@ -64,8 +66,9 @@ class View:
         self.classify_button.configure(highlightcolor="black")
         self.classify_button.configure(pady="0")
         self.classify_button.configure(text='''סווג''')
-
-    def file_error_handling(self):
+   
+    @property
+    def error_handling(self):
         messagebox.showerror("Error", "You need to enter a sentence")
         ans = messagebox.askyesno(message='Do you want to try again?')
         if not ans:
@@ -102,6 +105,8 @@ class View:
             rev = [w for w in rev if w not in stop_words]
 
         rev = self.rev.get("1.0", 'end-1c')
+
+            
         normalize()
         stem()
         remove_stop_words()
