@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+"""
+@author: Lior Reznik
+"""
+
 from preprocess import Preprocess
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.layers import Dense , Conv1D,MaxPooling1D , LSTM , Embedding, Dropout, Flatten
