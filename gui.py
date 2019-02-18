@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+"""
+@author: Lior Reznik
+"""
+
 from tkinter import *
 import re
 import numpy as np
