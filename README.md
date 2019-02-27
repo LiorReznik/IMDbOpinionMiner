@@ -1,5 +1,5 @@
 # sentimentReviews
-Sentiment analysis on IDBM reviews ,  using RNN with LSTM cells with keras
+Sentiment analysis on IDBM reviews ,  using CNN on top of  RNN ( Bidirectional LSTM)  with keras
 
 Live feture:
 to classify a user enterd review you should download the GUI,vocab,Final25 files and run the GUI
