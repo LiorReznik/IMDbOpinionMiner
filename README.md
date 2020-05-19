@@ -1,7 +1,11 @@
 ####refactored version will arive soon
+
 the following changes will take place at the refactored version:
+
 1.use of stanza tokenizer instad of keras.
+
 2.data leakage will be fixed
+
 3.general code refactoring
 
 # sentimentReviews
