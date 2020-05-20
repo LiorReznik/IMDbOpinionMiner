@@ -6,9 +6,11 @@ the following changes will take place at the refactored version:
 
 2.better cleaning.
 
-2.data leakage will be fixed
+2.data leakage will be fixed.
 
-3.general code refactoring
+3.will test 4 deep learning architectures.
+
+4.general code refactoring.
 
 # sentimentReviews
 Sentiment analysis on IDBM reviews ,  using CNN on top of  RNN ( Bidirectional LSTM)  with keras
