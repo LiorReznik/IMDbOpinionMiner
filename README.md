@@ -6,8 +6,8 @@ the following changes will take place at the refactored version:
 
 2.better cleaning.
 
-2.data leakage will be fixed.
-
+3.data leakage will be fixed.
+4.two options for encoding (embeddings or 
 3.will test 4 deep learning architectures.
 
 4.general code refactoring.
